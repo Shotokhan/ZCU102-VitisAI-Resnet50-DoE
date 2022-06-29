@@ -1,0 +1,500 @@
+Total experiment time: 5.15121
+Thread 0 execution time: 1.02911 seconds
+Total experiment time: 4.12156
+Thread 0 execution time: 2.6821e-05 seconds
+Total experiment time: 5.15251
+Thread 0 execution time: 1.02891 seconds
+Total experiment time: 4.12038
+Thread 0 execution time: 2.7743e-05 seconds
+Total experiment time: 5.15195
+Thread 0 execution time: 1.02898 seconds
+Total experiment time: 4.1175
+Thread 0 execution time: 2.5583e-05 seconds
+Total experiment time: 5.15655
+Thread 0 execution time: 1.0292 seconds
+Total experiment time: 4.11915
+Thread 0 execution time: 2.3932e-05 seconds
+Total experiment time: 5.16715
+Thread 0 execution time: 1.02892 seconds
+Total experiment time: 4.11741
+Thread 0 execution time: 2.5861e-05 seconds
+Total experiment time: 5.15083
+Thread 0 execution time: 1.02914 seconds
+Total experiment time: 4.11711
+Thread 0 execution time: 2.4913e-05 seconds
+Total experiment time: 5.14827
+Thread 0 execution time: 1.02901 seconds
+Total experiment time: 4.11664
+Thread 0 execution time: 2.7593e-05 seconds
+Total experiment time: 5.15365
+Thread 0 execution time: 1.02912 seconds
+Total experiment time: 4.11728
+Thread 0 execution time: 2.5573e-05 seconds
+Total experiment time: 5.14999
+Thread 0 execution time: 1.02895 seconds
+Total experiment time: 4.1161
+Thread 0 execution time: 2.6301e-05 seconds
+Total experiment time: 5.14753
+Thread 0 execution time: 1.029 seconds
+Total experiment time: 4.11766
+Thread 0 execution time: 2.4845e-05 seconds
+Total experiment time: 5.15004
+Thread 0 execution time: 1.02911 seconds
+Total experiment time: 4.12356
+Thread 0 execution time: 2.4223e-05 seconds
+Total experiment time: 5.14814
+Thread 0 execution time: 1.02894 seconds
+Total experiment time: 4.11724
+Thread 0 execution time: 2.6213e-05 seconds
+Total experiment time: 5.16141
+Thread 0 execution time: 1.02901 seconds
+Total experiment time: 4.1193
+Thread 0 execution time: 2.4484e-05 seconds
+Total experiment time: 5.15383
+Thread 0 execution time: 1.02912 seconds
+Total experiment time: 4.11938
+Thread 0 execution time: 2.537e-05 seconds
+Total experiment time: 5.15401
+Thread 0 execution time: 1.02896 seconds
+Total experiment time: 4.11846
+Thread 0 execution time: 2.5153e-05 seconds
+Total experiment time: 5.15401
+Thread 0 execution time: 1.02907 seconds
+Total experiment time: 4.12395
+Thread 0 execution time: 2.3687e-05 seconds
+Total experiment time: 5.15222
+Thread 0 execution time: 1.02916 seconds
+Total experiment time: 4.11852
+Thread 0 execution time: 2.4741e-05 seconds
+Total experiment time: 5.14785
+Thread 0 execution time: 1.02902 seconds
+Total experiment time: 4.12143
+Thread 0 execution time: 2.3992e-05 seconds
+Total experiment time: 5.14889
+Thread 0 execution time: 1.02917 seconds
+Total experiment time: 4.11832
+Thread 0 execution time: 2.5952e-05 seconds
+Total experiment time: 5.14627
+Thread 0 execution time: 1.02915 seconds
+Total experiment time: 4.12075
+Thread 0 execution time: 2.3441e-05 seconds
+Total experiment time: 5.1482
+Thread 0 execution time: 1.02894 seconds
+Total experiment time: 4.12173
+Thread 0 execution time: 2.6086e-05 seconds
+Total experiment time: 5.14708
+Thread 0 execution time: 1.02918 seconds
+Total experiment time: 4.12377
+Thread 0 execution time: 2.5565e-05 seconds
+Total experiment time: 5.1526
+Thread 0 execution time: 1.03186 seconds
+Total experiment time: 4.11668
+Thread 0 execution time: 2.5901e-05 seconds
+Total experiment time: 5.1478
+Thread 0 execution time: 1.02913 seconds
+Total experiment time: 4.11534
+Thread 0 execution time: 2.4844e-05 seconds
+Total experiment time: 5.15314
+Thread 0 execution time: 1.02914 seconds
+Total experiment time: 4.11488
+Thread 0 execution time: 2.4524e-05 seconds
+Total experiment time: 5.15127
+Thread 0 execution time: 1.02911 seconds
+Total experiment time: 4.11551
+Thread 0 execution time: 2.3362e-05 seconds
+Total experiment time: 5.15522
+Thread 0 execution time: 1.02922 seconds
+Total experiment time: 4.12792
+Thread 0 execution time: 2.6102e-05 seconds
+Total experiment time: 5.15304
+Thread 0 execution time: 1.02933 seconds
+Total experiment time: 4.11877
+Thread 0 execution time: 2.508e-05 seconds
+Total experiment time: 5.15662
+Thread 0 execution time: 1.02939 seconds
+Total experiment time: 4.1153
+Thread 0 execution time: 2.2675e-05 seconds
+Total experiment time: 5.14766
+Thread 0 execution time: 1.02884 seconds
+Total experiment time: 4.11803
+Thread 0 execution time: 2.5691e-05 seconds
+Total experiment time: 5.1509
+Thread 0 execution time: 1.02904 seconds
+Total experiment time: 4.11659
+Thread 0 execution time: 2.3604e-05 seconds
+Total experiment time: 5.15075
+Thread 0 execution time: 1.02901 seconds
+Total experiment time: 4.11995
+Thread 0 execution time: 2.8563e-05 seconds
+Total experiment time: 5.14732
+Thread 0 execution time: 1.029 seconds
+Total experiment time: 4.12241
+Thread 0 execution time: 2.4423e-05 seconds
+Total experiment time: 5.15287
+Thread 0 execution time: 1.02896 seconds
+Total experiment time: 4.11628
+Thread 0 execution time: 2.478e-05 seconds
+Total experiment time: 5.15223
+Thread 0 execution time: 1.02895 seconds
+Total experiment time: 4.11575
+Thread 0 execution time: 2.4453e-05 seconds
+Total experiment time: 5.15196
+Thread 0 execution time: 1.02918 seconds
+Total experiment time: 4.12102
+Thread 0 execution time: 2.6224e-05 seconds
+Total experiment time: 5.14678
+Thread 0 execution time: 1.02906 seconds
+Total experiment time: 4.11491
+Thread 0 execution time: 2.3092e-05 seconds
+Total experiment time: 5.15167
+Thread 0 execution time: 1.02896 seconds
+Total experiment time: 4.13221
+Thread 0 execution time: 2.3634e-05 seconds
+Total experiment time: 5.16037
+Thread 0 execution time: 1.02899 seconds
+Total experiment time: 4.12095
+Thread 0 execution time: 2.6542e-05 seconds
+Total experiment time: 5.16118
+Thread 0 execution time: 1.02891 seconds
+Total experiment time: 4.12008
+Thread 0 execution time: 2.4332e-05 seconds
+Total experiment time: 5.1485
+Thread 0 execution time: 1.02914 seconds
+Total experiment time: 4.12291
+Thread 0 execution time: 2.5511e-05 seconds
+Total experiment time: 5.15813
+Thread 0 execution time: 1.02919 seconds
+Total experiment time: 4.11609
+Thread 0 execution time: 2.4412e-05 seconds
+Total experiment time: 5.14767
+Thread 0 execution time: 1.02902 seconds
+Total experiment time: 4.11964
+Thread 0 execution time: 2.5534e-05 seconds
+Total experiment time: 5.14942
+Thread 0 execution time: 1.02892 seconds
+Total experiment time: 4.11934
+Thread 0 execution time: 2.427e-05 seconds
+Total experiment time: 5.15071
+Thread 0 execution time: 1.02887 seconds
+Total experiment time: 4.11825
+Thread 0 execution time: 2.4521e-05 seconds
+Total experiment time: 5.15128
+Thread 0 execution time: 1.02902 seconds
+Total experiment time: 4.11326
+Thread 0 execution time: 2.4142e-05 seconds
+Total experiment time: 5.14966
+Thread 0 execution time: 1.02882 seconds
+Total experiment time: 4.12004
+Thread 0 execution time: 2.4442e-05 seconds
+Total experiment time: 5.15512
+Thread 0 execution time: 1.02908 seconds
+Total experiment time: 4.11756
+Thread 0 execution time: 2.5774e-05 seconds
+Total experiment time: 5.14801
+Thread 0 execution time: 1.02897 seconds
+Total experiment time: 4.11821
+Thread 0 execution time: 2.6704e-05 seconds
+Total experiment time: 5.14573
+Thread 0 execution time: 1.02899 seconds
+Total experiment time: 4.11353
+Thread 0 execution time: 2.5131e-05 seconds
+Total experiment time: 3.02304
+Thread 0 execution time: 0.531433 seconds
+Thread 1 execution time: 0.538338 seconds
+Total experiment time: 2.46765
+Thread 0 execution time: 1.3372e-05 seconds
+Thread 1 execution time: 1.1852e-05 seconds
+Total experiment time: 3.02167
+Thread 0 execution time: 0.531276 seconds
+Thread 1 execution time: 0.538647 seconds
+Total experiment time: 2.60281
+Thread 0 execution time: 1.428e-05 seconds
+Thread 1 execution time: 1.6785e-05 seconds
+Total experiment time: 3.14201
+Thread 0 execution time: 0.532729 seconds
+Thread 1 execution time: 0.528919 seconds
+Total experiment time: 2.474
+Thread 0 execution time: 1.176e-05 seconds
+Thread 1 execution time: 1.3614e-05 seconds
+Total experiment time: 3.01746
+Thread 0 execution time: 0.533024 seconds
+Thread 1 execution time: 0.539363 seconds
+Total experiment time: 2.60807
+Thread 0 execution time: 1.481e-05 seconds
+Thread 1 execution time: 1.4822e-05 seconds
+Total experiment time: 3.01797
+Thread 0 execution time: 0.531103 seconds
+Thread 1 execution time: 0.537146 seconds
+Total experiment time: 2.47043
+Thread 0 execution time: 1.4382e-05 seconds
+Thread 1 execution time: 1.4611e-05 seconds
+Total experiment time: 3.14688
+Thread 0 execution time: 0.533369 seconds
+Thread 1 execution time: 0.529761 seconds
+Total experiment time: 2.60633
+Thread 0 execution time: 1.4411e-05 seconds
+Thread 1 execution time: 1.3571e-05 seconds
+Total experiment time: 3.1438
+Thread 0 execution time: 0.5333 seconds
+Thread 1 execution time: 0.529381 seconds
+Total experiment time: 2.60204
+Thread 0 execution time: 1.3081e-05 seconds
+Thread 1 execution time: 1.3373e-05 seconds
+Total experiment time: 3.0219
+Thread 0 execution time: 0.531704 seconds
+Thread 1 execution time: 0.538374 seconds
+Total experiment time: 2.47343
+Thread 0 execution time: 1.301e-05 seconds
+Thread 1 execution time: 1.4181e-05 seconds
+Total experiment time: 3.01742
+Thread 0 execution time: 0.530926 seconds
+Thread 1 execution time: 0.536813 seconds
+Total experiment time: 2.46945
+Thread 0 execution time: 1.3541e-05 seconds
+Thread 1 execution time: 1.2411e-05 seconds
+Total experiment time: 3.13805
+Thread 0 execution time: 0.533083 seconds
+Thread 1 execution time: 0.529111 seconds
+Total experiment time: 2.47852
+Thread 0 execution time: 1.2401e-05 seconds
+Thread 1 execution time: 1.3151e-05 seconds
+Total experiment time: 3.14214
+Thread 0 execution time: 0.532248 seconds
+Thread 1 execution time: 0.529067 seconds
+Total experiment time: 2.46945
+Thread 0 execution time: 1.2734e-05 seconds
+Thread 1 execution time: 1.1773e-05 seconds
+Total experiment time: 3.13397
+Thread 0 execution time: 0.53148 seconds
+Thread 1 execution time: 0.52838 seconds
+Total experiment time: 2.47505
+Thread 0 execution time: 1.2541e-05 seconds
+Thread 1 execution time: 1.2411e-05 seconds
+Total experiment time: 3.0209
+Thread 0 execution time: 0.531744 seconds
+Thread 1 execution time: 0.538132 seconds
+Total experiment time: 2.6018
+Thread 0 execution time: 1.4802e-05 seconds
+Thread 1 execution time: 1.388e-05 seconds
+Total experiment time: 3.01676
+Thread 0 execution time: 0.531136 seconds
+Thread 1 execution time: 0.537685 seconds
+Total experiment time: 2.60438
+Thread 0 execution time: 1.2162e-05 seconds
+Thread 1 execution time: 1.3982e-05 seconds
+Total experiment time: 3.02105
+Thread 0 execution time: 0.532785 seconds
+Thread 1 execution time: 0.538812 seconds
+Total experiment time: 2.46825
+Thread 0 execution time: 1.506e-05 seconds
+Thread 1 execution time: 1.3792e-05 seconds
+Total experiment time: 3.14592
+Thread 0 execution time: 0.532134 seconds
+Thread 1 execution time: 0.528907 seconds
+Total experiment time: 2.47109
+Thread 0 execution time: 1.3261e-05 seconds
+Thread 1 execution time: 1.4062e-05 seconds
+Total experiment time: 3.01496
+Thread 0 execution time: 0.532931 seconds
+Thread 1 execution time: 0.538881 seconds
+Total experiment time: 2.60195
+Thread 0 execution time: 1.3852e-05 seconds
+Thread 1 execution time: 1.3302e-05 seconds
+Total experiment time: 3.01383
+Thread 0 execution time: 0.532725 seconds
+Thread 1 execution time: 0.538523 seconds
+Total experiment time: 2.47815
+Thread 0 execution time: 1.391e-05 seconds
+Thread 1 execution time: 1.2481e-05 seconds
+Total experiment time: 3.13787
+Thread 0 execution time: 0.532546 seconds
+Thread 1 execution time: 0.528588 seconds
+Total experiment time: 2.60536
+Thread 0 execution time: 1.3802e-05 seconds
+Thread 1 execution time: 1.3782e-05 seconds
+Total experiment time: 3.01618
+Thread 0 execution time: 0.533006 seconds
+Thread 1 execution time: 0.538675 seconds
+Total experiment time: 2.47788
+Thread 0 execution time: 1.3943e-05 seconds
+Thread 1 execution time: 1.486e-05 seconds
+Total experiment time: 3.01582
+Thread 0 execution time: 0.53113 seconds
+Thread 1 execution time: 0.53684 seconds
+Total experiment time: 2.47179
+Thread 0 execution time: 1.2591e-05 seconds
+Thread 1 execution time: 1.3581e-05 seconds
+Total experiment time: 3.14032
+Thread 0 execution time: 0.532282 seconds
+Thread 1 execution time: 0.529061 seconds
+Total experiment time: 2.60691
+Thread 0 execution time: 1.382e-05 seconds
+Thread 1 execution time: 1.3413e-05 seconds
+Total experiment time: 3.01696
+Thread 0 execution time: 0.53122 seconds
+Thread 1 execution time: 0.538019 seconds
+Total experiment time: 2.60852
+Thread 0 execution time: 1.3921e-05 seconds
+Thread 1 execution time: 1.4672e-05 seconds
+Total experiment time: 3.02362
+Thread 0 execution time: 0.531936 seconds
+Thread 1 execution time: 0.538465 seconds
+Total experiment time: 2.47365
+Thread 0 execution time: 1.2752e-05 seconds
+Thread 1 execution time: 1.368e-05 seconds
+Total experiment time: 3.0243
+Thread 0 execution time: 0.532439 seconds
+Thread 1 execution time: 0.537905 seconds
+Total experiment time: 2.47429
+Thread 0 execution time: 1.332e-05 seconds
+Thread 1 execution time: 1.4163e-05 seconds
+Total experiment time: 3.1424
+Thread 0 execution time: 0.532581 seconds
+Thread 1 execution time: 0.529211 seconds
+Total experiment time: 2.60023
+Thread 0 execution time: 1.445e-05 seconds
+Thread 1 execution time: 1.404e-05 seconds
+Total experiment time: 3.13459
+Thread 0 execution time: 0.532538 seconds
+Thread 1 execution time: 0.528908 seconds
+Total experiment time: 2.60098
+Thread 0 execution time: 1.2791e-05 seconds
+Thread 1 execution time: 1.2621e-05 seconds
+Total experiment time: 3.01211
+Thread 0 execution time: 0.532012 seconds
+Thread 1 execution time: 0.537307 seconds
+Total experiment time: 2.46924
+Thread 0 execution time: 1.1512e-05 seconds
+Thread 1 execution time: 1.3252e-05 seconds
+Total experiment time: 3.13953
+Thread 0 execution time: 0.532517 seconds
+Thread 1 execution time: 0.528913 seconds
+Total experiment time: 2.60215
+Thread 0 execution time: 1.3511e-05 seconds
+Thread 1 execution time: 1.3752e-05 seconds
+Total experiment time: 3.13785
+Thread 0 execution time: 0.532348 seconds
+Thread 1 execution time: 0.529855 seconds
+Total experiment time: 2.47479
+Thread 0 execution time: 1.293e-05 seconds
+Thread 1 execution time: 1.472e-05 seconds
+Total experiment time: 3.01372
+Thread 0 execution time: 0.531536 seconds
+Thread 1 execution time: 0.537689 seconds
+Total experiment time: 2.47832
+Thread 0 execution time: 1.4621e-05 seconds
+Thread 1 execution time: 1.288e-05 seconds
+Total experiment time: 3.1396
+Thread 0 execution time: 0.53201 seconds
+Thread 1 execution time: 0.529062 seconds
+Total experiment time: 2.47498
+Thread 0 execution time: 1.3542e-05 seconds
+Thread 1 execution time: 1.3862e-05 seconds
+Total experiment time: 3.02012
+Thread 0 execution time: 0.532284 seconds
+Thread 1 execution time: 0.538026 seconds
+Total experiment time: 2.47338
+Thread 0 execution time: 1.337e-05 seconds
+Thread 1 execution time: 1.381e-05 seconds
+Total experiment time: 3.01655
+Thread 0 execution time: 0.531534 seconds
+Thread 1 execution time: 0.537795 seconds
+Total experiment time: 2.60708
+Thread 0 execution time: 1.3512e-05 seconds
+Thread 1 execution time: 1.3411e-05 seconds
+Total experiment time: 3.02064
+Thread 0 execution time: 0.531623 seconds
+Thread 1 execution time: 0.537776 seconds
+Total experiment time: 2.47507
+Thread 0 execution time: 1.2671e-05 seconds
+Thread 1 execution time: 1.3563e-05 seconds
+Total experiment time: 3.02094
+Thread 0 execution time: 0.532698 seconds
+Thread 1 execution time: 0.539058 seconds
+Total experiment time: 2.60163
+Thread 0 execution time: 1.2751e-05 seconds
+Thread 1 execution time: 1.3391e-05 seconds
+Total experiment time: 3.02343
+Thread 0 execution time: 0.532409 seconds
+Thread 1 execution time: 0.537803 seconds
+Total experiment time: 2.46937
+Thread 0 execution time: 1.292e-05 seconds
+Thread 1 execution time: 1.2001e-05 seconds
+Total experiment time: 3.02213
+Thread 0 execution time: 0.530706 seconds
+Thread 1 execution time: 0.537399 seconds
+Total experiment time: 2.47445
+Thread 0 execution time: 1.3732e-05 seconds
+Thread 1 execution time: 1.4262e-05 seconds
+Total experiment time: 3.13842
+Thread 0 execution time: 0.532628 seconds
+Thread 1 execution time: 0.529149 seconds
+Total experiment time: 2.59924
+Thread 0 execution time: 1.3242e-05 seconds
+Thread 1 execution time: 1.2181e-05 seconds
+Total experiment time: 3.01848
+Thread 0 execution time: 0.530851 seconds
+Thread 1 execution time: 0.537836 seconds
+Total experiment time: 2.60946
+Thread 0 execution time: 1.5611e-05 seconds
+Thread 1 execution time: 1.3441e-05 seconds
+Total experiment time: 3.14363
+Thread 0 execution time: 0.532719 seconds
+Thread 1 execution time: 0.529205 seconds
+Total experiment time: 2.60589
+Thread 0 execution time: 1.4283e-05 seconds
+Thread 1 execution time: 1.431e-05 seconds
+Total experiment time: 3.01817
+Thread 0 execution time: 0.531922 seconds
+Thread 1 execution time: 0.537494 seconds
+Total experiment time: 2.47195
+Thread 0 execution time: 1.1961e-05 seconds
+Thread 1 execution time: 1.3273e-05 seconds
+Total experiment time: 3.14195
+Thread 0 execution time: 0.532243 seconds
+Thread 1 execution time: 0.528719 seconds
+Total experiment time: 2.60699
+Thread 0 execution time: 1.4772e-05 seconds
+Thread 1 execution time: 1.404e-05 seconds
+Total experiment time: 3.13465
+Thread 0 execution time: 0.531793 seconds
+Thread 1 execution time: 0.528286 seconds
+Total experiment time: 2.475
+Thread 0 execution time: 1.3193e-05 seconds
+Thread 1 execution time: 1.26e-05 seconds
+Total experiment time: 3.01498
+Thread 0 execution time: 0.533143 seconds
+Thread 1 execution time: 0.538717 seconds
+Total experiment time: 2.6011
+Thread 0 execution time: 1.4582e-05 seconds
+Thread 1 execution time: 1.3902e-05 seconds
+Total experiment time: 3.14039
+Thread 0 execution time: 0.532453 seconds
+Thread 1 execution time: 0.529034 seconds
+Total experiment time: 2.46905
+Thread 0 execution time: 1.3032e-05 seconds
+Thread 1 execution time: 1.3591e-05 seconds
+Total experiment time: 3.13901
+Thread 0 execution time: 0.533152 seconds
+Thread 1 execution time: 0.530068 seconds
+Total experiment time: 2.47519
+Thread 0 execution time: 1.4655e-05 seconds
+Thread 1 execution time: 1.4713e-05 seconds
+Total experiment time: 3.14143
+Thread 0 execution time: 0.532702 seconds
+Thread 1 execution time: 0.529095 seconds
+Total experiment time: 2.60203
+Thread 0 execution time: 1.4721e-05 seconds
+Thread 1 execution time: 1.4681e-05 seconds
+Total experiment time: 3.01919
+Thread 0 execution time: 0.532782 seconds
+Thread 1 execution time: 0.538628 seconds
+Total experiment time: 2.60932
+Thread 0 execution time: 1.443e-05 seconds
+Thread 1 execution time: 1.4231e-05 seconds
+Total experiment time: 3.01899
+Thread 0 execution time: 0.531208 seconds
+Thread 1 execution time: 0.538297 seconds
+Total experiment time: 2.60487
+Thread 0 execution time: 1.5293e-05 seconds
+Thread 1 execution time: 1.734e-05 seconds

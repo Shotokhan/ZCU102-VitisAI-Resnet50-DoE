@@ -1,0 +1,8 @@
+the_ROM_image:
+{
+	[bootloader, destination_cpu=a53-0] /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/zynqmp_fsbl.elf
+	[pmufw_image] /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/pmufw.elf
+	[destination_cpu=a53-0, exception_level=el-3, trustzone] /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/bl31.elf
+	[destination_cpu=a53-0, load=0x00100000] /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/system.dtb
+	[destination_cpu=a53-0, exception_level=el-2] /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/u-boot.elf
+}

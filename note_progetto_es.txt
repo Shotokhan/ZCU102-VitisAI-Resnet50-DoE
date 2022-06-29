@@ -1,0 +1,978 @@
+P1: CMSIS-NN sui microcontrollari, per rimanere in tema AI, supportando piccoli modelli scritti in software. (20%)
+
+Ci si può rifare al progetto dell'anno precedente su CMSIS-NN migliorando qualcosa, oppure usare il nuovo framework fornito dall'ST.
+
+Modifichiamo questo esempio:
+https://github.com/STMicroelectronics/STM32CubeF4/blob/master/Drivers/CMSIS/NN/Examples/ARM/arm_nn_examples/cifar10/arm_nnexamples_cifar10.cpp
+
+Riducendo la dimensione dello scratch_buffer, perché va a sovrascrivere cose critiche, ed in tal caso salta ad un IRQHandler che è gestito come un InfiniteLoop.
+Al posto di avere le immagini hard-coded, le prendiamo in input tramite UART e restituiamo la classificazione; lato utente scriviamo quindi uno script in Python per leggere le immagini, farne il resize, serializzarle nel formato richiesto dall'applicazione, mandarle su UART e leggere il risultato dell'elaborazione.
+Lo facciamo solo per la F4, perché l'utilizzo di memoria è troppo elevato per la F3.
+
+P2: Su ultrascale, sintesi di reti neurali convoluzionali, DPU; ensemble learning. Alla fine bisogna fare anche un minimo di benchmarking del progetto. (80%)
+
+Driver uart da usare con la ultrascale: https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers
+
+In Linux non è necessario installarlo, dalla versione 2.6 in poi è installato di default, si può verificare sul proprio sistema così:
+$ modinfo cp210x
+
+Tutorial parte PS ultrascale: https://xilinx.github.io/Embedded-Design-Tutorials/docs/2021.2/build/html/docs/Introduction/ZynqMPSoC-EDT/4-build-sw-for-ps-subsystems.html 
+
+Nel seguire quest'ultimo tutorial, come xsa si utilizzeranno le DPU fornite, che sono file xsa, quindi si partirà da una descrizione hardware già fatta.
+
+PetaLinux installer: https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/embedded-design-tools.html
+
+Scarico il BSP per ZCU102, v2022.1, e scarico anche il PetaLinux Tools installer, della stessa versione; questo perché sta esplicitamente scritto che i BSP richiedono prima che vengano installati i PetaLinux tools.
+A tal proposito, un altro link utile: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Installing-the-PetaLinux-Tool
+Per quanto riguarda problemi specifici di Fedora: https://support.xilinx.com/s/question/0D52E00006hpRLPSA2/vivadopetalinux-20211-on-fedora-33?language=ja
+
+Repo github di VitisAI (da clonare, contiene i modelli già addestrati e quantizzati): https://github.com/Xilinx/Vitis-AI/
+
+Documentazione DPU: https://docs.xilinx.com/r/en-US/pg338-dpu/Introduction?tocId=SnA7xwLDczpNr~tR~CoVyg
+
+Dopo aver installato correttamente petalinux, seguo i passi spiegati qui: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Create-a-Project-from-a-BSP
+Nella cartella di petalinux:
+
+$ source settings.sh
+
+Nella cartella che ho chiamato "ultrascale_project":
+
+$ petalinux-create -t project -s ../xilinx-zcu102-v2022.1-04191534.bsp
+INFO: Create project: 
+INFO: Projects: 
+INFO: 	* xilinx-zcu102-2022.1
+INFO: Has been successfully installed to /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/
+INFO: New project successfully created in /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/
+
+Ora ho le immagini pre-built (nella sottocartella pre-built, appunto), ovvero potrei già fare il boot del sistema con Linux, anche se sarebbe non customizzato, cioè non ci sarebbe niente sulla parte PL, ad esempio.
+Dopodiché, visto che ho il file xsa, devo importarlo nel progetto petalinux, come spiegato qui: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Importing-Hardware-Configuration
+All'interno della sottocartella "xilinx-zcu102-2022.1":
+
+$ petalinux-config --get-hw-description ../../DPUcores_1_impl_1_01.xsa
+INFO] Sourcing buildtools
+INFO: Getting hardware description...
+INFO: Renaming DPUcores_1_impl_1_01.xsa to system.xsa
+[INFO] Generating Kconfig for project
+[INFO] Menuconfig project
+
+
+*** End of the configuration.
+*** Execute 'make' to start the build or try 'make help'.
+
+[INFO] Extracting yocto SDK to components/yocto. This may take time!
+[INFO] Sourcing build environment
+[INFO] Generating kconfig for Rootfs
+[INFO] Silentconfig rootfs
+[INFO] Generating plnxtool conf
+[INFO] Adding user layers
+[INFO] Generating workspace directory
+
+Nel menuconfig ho fatto le seguenti configurazioni:
+- DTG settings -> MACHINE_NAME lo posso settare a zcu102-rev1.0 (o ZCU102, non è chiaro dalla guida) oppure lasciarlo AUTO, lo lascio AUTO
+- Mi assicuro che Subsystem AUTO Hardware Settings sia selezionato
+- FPGA manager -> Fpga manager ci metto la spunta, come mi è stato indicato
+
+Il risultato della configurazione viene salvato nel file ./project-spec/configs/config .
+Analogamente avrei potuto scegliere anche l'altro file, DPUcores_2_impl_1_01.xsa, che è la stessa implementazione, ma con 2 core.
+
+Ora siamo pronti per fare la build: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Steps-to-Build-PetaLinux-System-Image
+All'interno della sottocartella "xilinx-zcu102-2022.1":
+
+$ petalinux-build
+[INFO] Sourcing buildtools
+[INFO] Building project
+[INFO] Sourcing build environment
+[INFO] Generating workspace directory
+INFO: bitbake petalinux-image-minimal
+NOTE: Started PRServer with DBfile: /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/build/cache/prserv.sqlite3, Address: 127.0.0.1:37603, PID: 123270
+Loading cache: 100% |                                                                                                                                   | ETA:  --:--:--
+Loaded 0 entries from dependency cache.
+Parsing recipes: 100% |##################################################################################################################################| Time: 0:06:00
+Parsing of 3592 .bb files complete (0 cached, 3592 parsed). 5394 targets, 561 skipped, 0 masked, 0 errors.
+NOTE: Resolving any missing task queue dependencies
+NOTE: Fetching uninative binary shim file:///home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/components/yocto/downloads/uninative/126f4f7f6f21084ee140dac3eb4c536b963837826b7c38599db0b512c3377ba2/x86_64-nativesdk-libc-3.4.tar.xz;sha256sum=126f4f7f6f21084ee140dac3eb4c536b963837826b7c38599db0b512c3377ba2 (will check PREMIRRORS first)
+Initialising tasks: 100% |###############################################################################################################################| Time: 0:00:09
+Checking sstate mirror object availability: 100% |#######################################################################################################| Time: 0:01:06
+Sstate summary: Wanted 1752 Local 0 Network 1430 Missed 322 Current 0 (81% match, 0% complete)
+NOTE: Executing Tasks
+NOTE: Tasks Summary: Attempted 4666 tasks of which 3951 didn't need to be rerun and all succeeded.
+INFO: Failed to copy built images to tftp dir: /tftpboot
+[INFO] Successfully built project
+
+Le immagini generate vanno nella sottocartella ./images/linux/ , mentre in ./build/build.log si trovano log dettagliati sulla build. Di default, i componenti di boot vengono generati per diversi SoC, non solo per la Ultrascale; per lo specifico SoC, ci sono degli step successivi da fare, ovvero generare la boot image in formato .BIN, come descritto qui: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Generate-Boot-Image-for-Zynq-UltraScale-MPSoC
+
+$ petalinux-package --boot --u-boot
+[INFO] Sourcing buildtools
+INFO: Getting system flash information...
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/zynqmp_fsbl.elf"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/pmufw.elf"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/bl31.elf"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/system.dtb"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/u-boot.elf"
+INFO: Generating zynqmp binary package BOOT.BIN...
+
+
+****** Xilinx Bootgen v2022.1
+  **** Build date : Mar 30 2022-09:29:13
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+[WARNING]: Partition zynqmp_fsbl.elf.0 range is overlapped with partition bl31.elf.0 memory range
+
+[INFO]   : Bootimage generated successfully
+
+INFO: Binary is ready.
+WARNING: Unable to access the TFTPBOOT folder /tftpboot!!!
+WARNING: Skip file copy to TFTPBOOT folder!!!
+
+A tal punto è possibile anche effettuare un'emulazione software, a differenti livelli (arrivando ad U-Boot o arrivando al kernel), è utile vedere questo link: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Steps-to-Boot-a-PetaLinux-Image-on-QEMU
+Non è necessario specificare esplicitamente i path dei singoli componenti, come spiegato nella guida se li prende da solo da ./images; se si vogliono usare quelli pre-built, o altri, bisogna specificarli esplicitamente, e sta spiegato quali bisogna specificare.
+Provo prima a fare l'avvio solo con u-boot:
+
+$ petalinux-boot --qemu --u-boot
+...
+U-Boot 2022.01 (Apr 04 2022 - 07:53:54 +0000)
+CPU:   ZynqMP
+Silicon: v3
+Model: ZynqMP ZCU102 Rev1.0
+Board: Xilinx ZynqMP
+DRAM:  4 GiB
+PMUFW:	v1.1
+EL Level:	EL2
+Chip ID:	unknown
+NAND:  0 MiB
+MMC:   mmc@ff170000: 0
+Loading Environment from nowhere... OK
+In:    serial
+Out:   serial
+Err:   serial
+Bootmode: JTAG_MODE
+Reset reason:	
+Net:   
+ZYNQ GEM: ff0e0000, mdio bus ff0e0000, phyaddr 12, interface rgmii-id
+zynq_gem ethernet@ff0e0000: Failed to read eth PHY id, err: -2
+Warning: ethernet@ff0e0000 (eth0) using random MAC address - ca:d6:5e:3a:81:15
+eth0: ethernet@ff0e0000
+...
+ZynqMP> ...
+
+Ho dunque una shell u-boot su una ZynqMP virtualizzata, da cui posso uscire con la sequenza: Ctrl+A, X
+Proviamo ora quella con anche il kernel:
+
+$ petalinux-boot --qemu --kernel
+...
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+[    0.000000] Linux version 5.15.19-xilinx-v2022.1 (oe-user@oe-host) (aarch64-xilinx-linux-gcc (GCC) 11.2.0, GNU ld (GNU Binutils) 2.37.20210721) #1 SMP Mon Apr 11 17:52:14 UTC 2022
+[    0.000000] Machine model: ZynqMP ZCU102 Rev1.0
+[    0.000000] earlycon: cdns0 at MMIO 0x00000000ff000000 (options '115200n8')
+[    0.000000] printk: bootconsole [cdns0] enabled
+[    0.000000] efi: UEFI not found.
+[    0.000000] Zone ranges:
+[    0.000000]   DMA32    [mem 0x0000000000000000-0x00000000ffffffff]
+[    0.000000]   Normal   [mem 0x0000000100000000-0x000000087fffffff]
+...
+xilinx-zcu102-20221 login: petalinux
+You are required to change your password immediately (administrator enforced).
+New password: 
+Retype new password: 
+xilinx-zcu102-20221:~$ whoami
+petalinux
+
+Ed eccoci qui con una shell di Linux. Anche in questo caso per quittare qemu serve la sequenza Ctrl+A, X.
+
+Infine resta da mettere il tutto su SD card: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Steps-to-Boot-a-PetaLinux-Image-on-Hardware-with-SD-Card
+Ho lasciato 4 MB non allocati all'inizio, poi una partizione fat32 da 1 GB etichettata BOOT ed il resto dello spazio ext4 etichettato rootfs.
+In BOOT ho ricopiato BOOT.BIN, image.ub e boot.scr; in rootfs ho estratto rootfs.tar.gz . Tutto ciò che ho citato l'ho preso da ./images/linux, lo specifico perché è presente anche in pre-built, volendo.
+
+Se tutto va bene in fase di avvio sulla scheda fisica, resterà da fare la parte applicativa, facendo uso di Vitis-AI; quindi l'unica parte ancora di tale guida che potrebbe tornare utile è quella relativa alla customizzazione del root file system: https://docs.xilinx.com/r/en-US/ug1144-petalinux-tools-reference-guide/Customizing-the-Root-File-System
+Poi quindi si dovranno ripetere i diversi step di build per l'altro file .xsa, che è la stessa DPU ma con 2 core; quindi bisogna fare su ciascuna DPU diversi esperimenti, ottenendo la performance in termini di tempi di inferenza. Per ciascuna di esse, vogliamo gli intervalli di confidenza, in modo da fare un benchmark statisticamente valido.
+A tal proposito può risultare utile l'utilizzo dell'FPGA manager (fpgautil), che idealmente dovrebbe evitare la ripetizione dei diversi step di build, permettendo la riconfigurazione della parte PL.
+
+C'è stato un errore dovuto al fatto che nell'FPGA manager non era stata specificata la cartella in cui prendere i .xsa .
+Quindi devo rifare petalinux-config e petalinux-build, poi:
+$ petalinux-package --boot --u-boot --force
+
+E infine preparare di nuovo la scheda sd.
+In questo modo mi dà kernel panic (attempted to kill init).
+
+Per quanto riguarda il benchmark, dobbiamo scegliere uno o più fattori da far variare, e fare quindi un'analisi delle prestazioni lungo tali fattori, eventualmente facendone variare più di uno.
+Quindi dobbiamo scegliere i fattori ed i relativi valori, da qua: https://docs.xilinx.com/r/en-US/pg338-dpu/Architecture-of-the-DPUCZDX8G
+Questi poi si possono configurare qui: Vitis-AI/dsa/DPU-TRD/prj/Vivado/scripts/trd_prj.tcl, ma in realtà useremo sempre bitstream già sintetizzati, con i valori scelti.
+La documentazione di Vitis-AI: https://docs.xilinx.com/r/1.3-English/ug1414-vitis-ai/Vitis-AI-Programming-Interface
+
+Torniamo alla parte di boot.
+Bisogna configurare rootfs per disabilitare l'autologin, ed aggiungere di nuovo fpga manager nella configurazione del kernel.
+Utile vedere questo articolo: https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/18841847/Solution+ZynqMP+PL+Programming
+Dunque riconfiguro subsystem, kernel e rootfs.
+
+$ petalinux-config
+In Image packaging configuration, disabilito "Copy final images to tftpboot", che tanto non mi serve.
+Verifico che l'FPGA manager sia configurato correttamente.
+
+$ petalinux-config -c kernel
+In Device Drivers -> FPGA Configuration Framework mi assicuro che ci sia la spunta su "Xilinx ZynqMP FPGA" e su "FPGA debug fs".
+In Device Drivers -> "Device Tree and Open Firmware support" mi assicuro che ci sia la spunta su "Device tree overlays" e "Device tree overlay ConfigFS interface"
+In Memory Management Options -> mi assicuro che ci sia la spunta su "Contigous Memory Allocator"
+In Library Routines -> mi assicuro che ci sia la spunta su "DMA Contigous Memory Allocator"
+
+$ petalinux-config -c rootfs
+Vedo che l'auto-login era in realtà già disabilitato. A tal punto allora lo abilito, in Image Features -> auto-login.
+Aggiungo inoltre un po' di software:
+In Filesystem packages:
+	admin -> sudo -> sudo
+	base:
+		base-passwd -> base-passwd
+		busybox -> busybox
+		fpga-manager-script -> fpga-manager-script (era già spuntato)
+		init-ifupdown -> init-ifupdown (per le interfacce di rete)
+		shell -> bash -> bash
+		tar -> tar
+		tzdata -> tzdata
+		util-linux -> util-linux, util-linux-sulogin, util-linux-hwclock, util-linux-bash-completion, util-linux-umount, util-linux-mount, util-linux-lscpu
+		utils -> shadow -> shadow, shadow-base
+	console -> network -> dropbear -> dropbear
+	console -> utils:
+		bash-completion -> bash-completion
+		file -> file
+		strace -> strace
+		vim -> vim, vim-help, vim-tools, vim-common, vim-syntax
+	libs:
+		libgcc -> libgcc
+		libsecret -> libsecret
+		open-amp -> open-amp
+		opencv -> opencv
+	misc:
+		coreutils -> coreutils
+		gdb -> gdb, gdbserver
+		glibc -> glibc, ldd
+		python3 -> python3, python3-crypt,io,pydoc,codecs,datetime,modules,numbers,pyvenv,math,compression,core,shell,threading,misc,json,distutils,multiprocessing,image,ctypes,debugger, libpython3
+		python3-setuptools -> python3-setuptools
+In Petalinux Package groups:
+	packagegroup-petalinux -> packagegroup-petalinux
+	packagegroup-petalinux-opencv -> packagegroup-petalinux-opencv
+	packagegroup-petalinux-python-modules -> packagegroup-petalinux-python-modules
+	packagegroup-petalinux-utils -> packagegroup-petalinux-utils
+	
+La root password è "root".
+Ora rifaccio build e packaging.
+
+$ petalinux-build
+[INFO] Sourcing buildtools
+[INFO] Building project
+[INFO] Sourcing build environment
+[INFO] Generating workspace directory
+INFO: bitbake petalinux-image-minimal
+NOTE: Started PRServer with DBfile: /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/build/cache/prserv.sqlite3, Address: 127.0.0.1:39631, PID: 65730
+Loading cache: 100% |                                                                                                                                   | ETA:  --:--:--
+Loaded 0 entries from dependency cache.
+Parsing recipes: 100% |##################################################################################################################################| Time: 0:04:15
+Parsing of 3592 .bb files complete (0 cached, 3592 parsed). 5394 targets, 561 skipped, 0 masked, 0 errors.
+NOTE: Resolving any missing task queue dependencies
+NOTE: Multiple providers are available for runtime python3-pyvenv (python3, python3-native)
+Consider defining a PREFERRED_RPROVIDER entry to match python3-pyvenv
+Initialising tasks: 100% |###############################################################################################################################| Time: 0:00:11
+Checking sstate mirror object availability: 100% |#######################################################################################################| Time: 0:01:27
+Sstate summary: Wanted 1583 Local 13 Network 1210 Missed 360 Current 1216 (77% match, 87% complete)
+Removing 29 stale sstate objects for arch xilinx_zcu102: 100% |##########################################################################################| Time: 0:00:00
+NOTE: Executing Tasks
+WARNING: petalinux-image-minimal-1.0-r0 do_rootfs: Enabling autologin to user root.  This configuration should NOT be used in production!
+NOTE: Tasks Summary: Attempted 7135 tasks of which 6793 didn't need to be rerun and all succeeded.
+
+Summary: There was 1 WARNING message shown.
+INFO: copy to TFTP-boot directory is not enabled !!
+[INFO] Successfully built project
+
+$ petalinux-package --boot --u-boot
+[INFO] Sourcing buildtools
+INFO: Getting system flash information...
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/zynqmp_fsbl.elf"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/pmufw.elf"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/bl31.elf"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/system.dtb"
+INFO: File in BOOT BIN: "/home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/images/linux/u-boot.elf"
+INFO: Generating zynqmp binary package BOOT.BIN...
+
+
+****** Xilinx Bootgen v2022.1
+  **** Build date : Mar 30 2022-09:29:13
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+[WARNING]: Partition zynqmp_fsbl.elf.0 range is overlapped with partition bl31.elf.0 memory range
+
+[INFO]   : Bootimage generated successfully
+
+INFO: Binary is ready.
+
+Rifaccio anche il boot con qemu.
+$ petalinux-boot --qemu --kernel
+...
+
+Tutto bene con l'autologin e con i pacchetti aggiunti.
+Ora torniamo a Vitis-AI, cercando di fare qualche esempio. Ricordiamo che la documentazione è qui: https://docs.xilinx.com/r/1.3-English/ug1414-vitis-ai/Vitis-AI-Programming-Interface
+
+Per prima cosa mi apro la cartella Vitis-AI/tools/Vitis-AI-Library con visual studio code.
+Poi apro cmake.sh e modifico build_dir_default.
+A tal punto seguo i passi di installazione descritti qui: https://docs.xilinx.com/r/en-US/ug1354-xilinx-ai-sdk/Setting-Up-the-Host
+In Vitis-AI/setup/mpsoc/VART (nel cui readme tra l'altro trovo un link ad una system image ufficiale che si può mettere sulla SD usando Etcher, che scarico come opzione di backup nel caso in cui il boot dovesse ancora essere non funzionante: https://www.xilinx.com/member/forms/download/design-license-xef.html?filename=xilinx-zcu102-dpu-v2021.2-v2.0.0.img.gz) eseguo:
+
+$ ./host_cross_compiler_setup.sh
+...
+The Cross Compiler will be installed in ~/petalinux_sdk_2021.2 by default
+...
+Complete Cross Compiler installation
+
+Please run the following command to enable Cross Compiler
+    source /home/marcofelix98/petalinux_sdk_2021.2/environment-setup-cortexa72-cortexa53-xilinx-linux
+If you run the above command failed, run the following commands to enable Cross Compiler
+    unset LD_LIBRARY_PATH
+    source /home/marcofelix98/petalinux_sdk_2021.2/environment-setup-cortexa72-cortexa53-xilinx-linux
+
+Oltre al cross compiler, ho anche le librerie per compilare sul mio host, anche se non l'environment-setup file.
+Ora:
+
+$ source ~/petalinux_sdk_2021.2/environment-setup-cortexa72-cortexa53-xilinx-linux
+
+Come indicato dalla guida, provo a compilare un programma di esempio.
+Vado in Vitis-AI/demo/Vitis-AI-Library/samples/classification, poi:
+
+$ chmod +x build.sh
+$ ./build.sh
+
+La compilazione va a buon fine, ottengo eseguibili di questo tipo:
+
+$ file test_jpeg_classification
+test_jpeg_classification: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (GNU/Linux), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=32aecceeaffd5d47e96972a7ea9ca8264ae74ff7, for GNU/Linux 3.14.0, with debug_info, not stripped
+
+A questo punto devo buildare le librerie di vitis-ai, per le quali ho già modificato build_dir_default:
+# build_dir_default=$HOME/build/build.${target_info}/${project_name}
+build_dir_default=$HOME/EmbeddedSystems/progetto/vitis_ai_build/build/build.${target_info}/${project_name}
+
+Vado in Vitis-AI/tools/Vitis-AI-Library ed eseguo:
+
+$ ./cmake.sh --clean
+
+Dopo un po', finisce la build con successo. Va praticamente tutto in ~/petalinux_sdk_2021.2/sysroots/cortexa72-cortexa53-xilinx-linux/install/Debug .
+Vengono inoltre salvati i compile commands in un file compile_commands.json, nella directory corrente.
+Invece i vari shared objects, in base alla build_dir_default che ho specificato, vanno in: ~/EmbeddedSystems/progetto/vitis_ai_build/build/build.linux.2021.2.aarch64.Debug/Vitis-AI-Library
+
+Prima di continuare oltre, mi serve l'accesso in SSH al guest QEMU, che posso ottenere, come descritto qui https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/862912682/Networking+in+QEMU, con una configurazione aggiuntiva:
+$ petalinux-boot --qemu --kernel --qemu-args "-net nic -net nic -net nic -net nic,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::1114-:22"
+
+In questo modo posso connettermi sfruttando il port forwarding, anche non avendo l'interfaccia sull'host:
+$ ssh -p 1114 root@localhost
+
+Dopo qualche secondo mi arriva il prompt relativo alla fingerprint della chiave, perfetto. Ho anche la connessione dalla VM ad Internet.
+Ora devo iniziare a scegliere che modello usare e farne il download; scelgo yolov3, di darknet, ed uso il downloader in Vitis-AI/models/AI-Model-Zoo:
+
+$ python downloader.py 
+Tip:
+you need to input framework and model name, use space divide such as tf vgg16
+tf:tensorflow1.x  tf2:tensorflow2.x  cf:caffe  dk:darknet  pt:pytorch  all: list all model
+input:dk yolov3
+chose model
+0 : all
+1 : dk_yolov3_voc_416_416_65.42G_2.0
+2 : dk_yolov3_cityscapes_256_512_0.9_5.46G_2.0
+3 : dk_yolov3_bdd_288_512_53.7G_2.0
+input num:1
+chose model type
+0: all
+1 : GPU
+2 : zcu102 & zcu104 & kv260
+3 : vck190
+4 : vck50006pe-DPUCVDX8H-DWC
+5 : vck50008pe-DPUCVDX8H
+6 : u50lv-DPUCAHX8H
+7 : u50lv-DPUCAHX8H-DWC & u55c-DPUCAHX8H-DWC
+8 : u200-DPUCADF8H & u250-DPUCADF8H
+input num:2
+yolov3_voc-zcu102_zcu104_kv260-r2.0.0.tar.gz
+                                              100.0%|100%
+done
+
+
+Questo lo ricopio nella cartella in cui scrivo il codice per il benchmark, ovvero benchmark_code.
+Mi creo quindi il mio file .cpp, modificando la demo di yolov3 (https://github.com/Xilinx/Vitis-AI/blob/master/demo/Vitis-AI-Library/samples/dpu_task/yolov3/demo_yolov3.cpp), e mi creo il mio build.sh. La modifica iniziale che faccio riguarda il passaggio di xir::Attrs a DpuTask::create per eseguire in simulazione.
+
+Dopo averlo compilato correttamente, lo ricopio su qemu con scp.
+
+$ scp -P1114 benchmark root@localhost:/home/root/
+
+Un veloce ldd mi rileva che nel mio rootfs mancano molte librerie condivise:
+# ldd benchmark
+	linux-vdso.so.1 (0x0000ffffa750d000)
+	libglog.so.0 => /usr/lib/libglog.so.0 (0x0000ffffa7480000)
+	libvitis_ai_library-xnnpp.so.2 => not found
+	libvitis_ai_library-model_config.so.2 => not found
+	libprotobuf.so.24 => not found
+	libvitis_ai_library-dpu_task.so.2 => not found
+	libopencv_core.so.4.4 => not found
+	libopencv_video.so.4.4 => not found
+	libopencv_videoio.so.4.4 => not found
+	libopencv_imgproc.so.4.4 => not found
+	libopencv_imgcodecs.so.4.4 => not found
+	libopencv_highgui.so.4.4 => not found
+	libxir.so.2 => not found
+	libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x0000ffffa7266000)
+	libm.so.6 => /lib/libm.so.6 (0x0000ffffa71d1000)
+	libgcc_s.so.1 => /lib/libgcc_s.so.1 (0x0000ffffa71ac000)
+	libc.so.6 => /lib/libc.so.6 (0x0000ffffa7005000)
+	/lib/ld-linux-aarch64.so.1 (0x0000ffffa74d9000)
+	libunwind.so.8 => /usr/lib/libunwind.so.8 (0x0000ffffa6fc6000)
+	libgflags.so.2.2 => /usr/lib/libgflags.so.2.2 (0x0000ffffa6f96000)
+
+In teoria, tali librerie sono presenti nella boot image fornita da Xilinx, come spiegato qui https://docs.xilinx.com/r/en-US/ug1354-xilinx-ai-sdk/Step-3-Installing-AI-Library-Package.
+In generale dunque mi basta installare il Vitis-AI runtime, me lo posso scaricare e fare scp. A questo punto la cosa più veloce è crearmi il mio archivio vitis-ai-runtime con le librerie che vedo che mancano.
+Vado in ~/petalinux_sdk_2021.2/sysroots/cortexa72-cortexa53-xilinx-linux/usr/lib e faccio:
+
+$ tar -czvf ~/EmbeddedSystems/progetto/benchmark_code/vitis-ai-runtime.tar.gz libvitis_ai_library-xnnpp.so.* libvitis_ai_library-model_config.so.* libprotobuf.so.* libvitis_ai_library-dpu_task.so.* libopencv_core.so.* libopencv_video.so.* libopencv_videoio.so.* libopencv_imgproc.so.* libopencv_imgcodecs.so.* libopencv_highgui.so.* libxir.so.*
+
+A tal punto ritorno nella cartella benchmark_code e faccio scp:
+
+$ scp -P1114 vitis-ai-runtime.tar.gz root@localhost:/home/root/
+
+In qemu, estraggo l'archivio in /usr/lib:
+
+$ tar -xvf vitis-ai-runtime.tar.gz -C /usr/lib
+
+Fatto questo, però, con ldd ho altre librerie not found; le aggiungo.
+ ldd benchmark | grep "not found"
+	libvitis_ai_library-math.so.2 => not found
+	libvitis_ai_library-graph_runner.so.2 => not found
+	libvitis_ai_library-math.so.2 => not found
+	libvart-runner-assistant.so.2 => not found
+	libvart-runner.so.2 => not found
+	libvart-util.so.2 => not found
+	libtbb.so.2 => not found
+	libopencv_calib3d.so.4.4 => not found
+	libunilog.so.2 => not found
+
+
+$ tar -czvf ~/EmbeddedSystems/progetto/benchmark_code/vitis-ai-runtime.tar.gz libvitis_ai_library-xnnpp.so* libvitis_ai_library-model_config.so* libprotobuf.so* libvitis_ai_library-dpu_task.so* libopencv_core.so* libopencv_video.so* libopencv_videoio.so* libopencv_imgproc.so* libopencv_imgcodecs.so* libopencv_highgui.so* libxir.so* libvitis_ai_library-math.so* libvitis_ai_library-graph_runner.so* libvitis_ai_library-math.so* libvart-runner-assistant.so* libvart-runner.so* libvart-util.so* libtbb.so* libopencv_calib3d.so* libunilog.so*  
+
+E quindi di nuovo scp, extract ed ldd:
+# ldd benchmark | grep "not found"
+	libvart-dpu-controller.so.2 => not found
+	libvitis_ai_library-runner_helper.so.2 => not found
+	libvart-buffer-object.so.2 => not found
+	libopencv_features2d.so.4.4 => not found
+	libopencv_flann.so.4.4 => not found
+	libboost_filesystem.so.1.74.0 => not found
+
+$ tar -czvf ~/EmbeddedSystems/progetto/benchmark_code/vitis-ai-runtime.tar.gz libvitis_ai_library-xnnpp.so* libvitis_ai_library-model_config.so* libprotobuf.so* libvitis_ai_library-dpu_task.so* libopencv_core.so* libopencv_video.so* libopencv_videoio.so* libopencv_imgproc.so* libopencv_imgcodecs.so* libopencv_highgui.so* libxir.so* libvitis_ai_library-math.so* libvitis_ai_library-graph_runner.so* libvitis_ai_library-math.so* libvart-runner-assistant.so* libvart-runner.so* libvart-util.so* libtbb.so* libopencv_calib3d.so* libunilog.so* libvart-dpu-controller.so* libvitis_ai_library-runner_helper.so* libvart-buffer-object.so* libopencv_features2d.so* libopencv_flann.so* libboost_filesystem.so* 
+
+Ancora:
+# ldd benchmark | grep "not found"
+	libvart-trace.so.2 => not found
+	libvart-xrt-device-handle.so.2 => not found
+	libvart-xrt-device-handle.so.2 => not found
+
+$ tar -czvf ~/EmbeddedSystems/progetto/benchmark_code/vitis-ai-runtime.tar.gz libvitis_ai_library-xnnpp.so* libvitis_ai_library-model_config.so* libprotobuf.so* libvitis_ai_library-dpu_task.so* libopencv_core.so* libopencv_video.so* libopencv_videoio.so* libopencv_imgproc.so* libopencv_imgcodecs.so* libopencv_highgui.so* libxir.so* libvitis_ai_library-math.so* libvitis_ai_library-graph_runner.so* libvitis_ai_library-math.so* libvart-runner-assistant.so* libvart-runner.so* libvart-util.so* libtbb.so* libopencv_calib3d.so* libunilog.so* libvart-dpu-controller.so* libvitis_ai_library-runner_helper.so* libvart-buffer-object.so* libopencv_features2d.so* libopencv_flann.so* libboost_filesystem.so* libvart-trace.so* libvart-xrt-device-handle.so* libvart-xrt-device-handle.so* 
+
+Okay, questo è quello buono.
+Ora devo copiarmi il model:
+
+$ scp -P1114 yolov3_voc-zcu102_zcu104_kv260-r2.0.0.tar.gz root@localhost:/home/root/
+
+Dunque in qemu:
+# tar -xvf yolov3_voc-zcu102_zcu104_kv260-r2.0.0.tar.gz -C /dev/shm
+
+Lo estraggo in /dev/shm perché df mi mostra che non ho più spazio.
+A tal punto mi copio le immagini:
+$ scp -P1114 yolo_1.jpg  root@localhost:/home/root/
+$ scp -P1114 yolo_2.jpg  root@localhost:/home/root/
+$ scp -P1114 yolo_3.jpg  root@localhost:/home/root/
+
+# ./benchmark /dev/shm/yolov3_voc/yolov3_voc.xmodel yolo_1.jpg yolo_2.jpg yolo_3.jpg 
+terminate called after throwing an instance of 'boost::filesystem::filesystem_error'
+  what():  boost::filesystem::directory_iterator::construct: No such file or directory: "/dev/dri/by-path/"
+[ 8092.311880] audit: type=1701 audit(1655222976.352:3): auid=4294967295 uid=0 gid=0 ses=4294967295 pid=1221 comm="benchmark" exe="/home/root/benchmark" sig=6 res=1
+Aborted
+
+In questo caso ho un errore, avendo messo "sim" come modalità. Proviamo a mettere "ref" (CPU runner).
+Stesso errore anche con "ref". Proviamo anche con "run". Stesso errore ancora.
+A questo punto, o non ho passato il parametro come mi aspettavo, o effettivamente non si riesce a simulare.
+
+Magari provo a modificarlo partendo da qui: https://github.com/Xilinx/Vitis-AI/blob/master/demo/VART/resnet50/src/main.cc#L282
+Ci ho provato ma poi mi sono reso conto che era troppo un mix di tipi, infatti da qua: https://docs.xilinx.com/r/en-US/ug1354-xilinx-ai-sdk/Developing-with-Vitis-AI-API_0
+Vedo che ci sono diverse API, una che "depreca" l'altra: quella con create_runner, execute_async e wait è l'API 0, quindi la più vecchia (e l'unica documentata...).
+Gli esempi nuovi usano l'API_2, ovvero usano DpuTask, e poi creano delle librerie al contorno per pre-processing e post-processing relativi allo specifico esempio; tali librerie sono ancora abbastanza accoppiate però alla gestione dei tensori.
+Il disaccoppiamento migliore è dato dall'API_3, che implementa un generico "Graph Runner", intorno al quale si può in modo trasparente fare pre-processing e post-processing. Inoltre, il graph runner permette anche di ri-ottenere alcune funzionalità dell'API_0 che l'API_2 non aveva incluso.
+Nel mio caso, vedo che mediante l'API_2 è possibile fare un fallback sull'API_3 (ovviamente sarà stata un'aggiunta successiva), mediante un attributo "use_graph_runner". Faccio così perché DpuTask usa vart::Runner::create_runner_with_attrs, che non è documentato, e quindi non sono sicuro che l'attributo "mode" che stavo passando fosse giusto. Per contro, al graph runner posso passare "device" settato a "CPU".
+Per capirlo, seguo questo flusso:
+https://github.com/Xilinx/Vitis-AI/blob/master/tools/Vitis-AI-Library/dpu_task/src/dpu_task.cpp#L29
+https://github.com/Xilinx/Vitis-AI/blob/master/tools/Vitis-AI-Library/dpu_task/src/dpu_task_imp.cpp#L155-L164
+https://github.com/Xilinx/Vitis-AI/blob/master/tools/Vitis-AI-Library/dpu_task/src/dpu_task_imp.cpp#L107-L112
+https://github.com/Xilinx/Vitis-AI/blob/master/tools/Vitis-AI-Library/graph_runner/src/graph_runner.cpp#L34-L58
+
+Anche così però dà errore. Riporto alcune linee dell'output di strace:
+# strace ./benchmark /dev/shm/yolov3_voc/yolov3_voc.xmodel yolo_1.jpg
+...
+uname({sysname="Linux", nodename="xilinx-zcu102-20221", ...}) = 0
+openat(AT_FDCWD, "/dev/dpu", O_RDWR)    = -1 ENOENT (No such file or directory)
+close(-1)                               = -1 EBADF (Bad file descriptor)
+newfstatat(AT_FDCWD, "", 0xfffff6bfc3e8, 0) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "", 0xfffff6bfc3e8, 0) = -1 ENOENT (No such file or directory)
+readlinkat(AT_FDCWD, "/proc/self/exe", "/home/root/benchmark", 4096) = 20
+newfstatat(AT_FDCWD, "/home/root/xrt.ini", 0xfffff6bfc328, 0) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/home/root/sdaccel.ini", 0xfffff6bfc328, 0) = -1 ENOENT (No such file or directory)
+getcwd("/home/root", 1024)              = 11
+newfstatat(AT_FDCWD, "/home/root/xrt.ini", 0xfffff6bfc328, 0) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/home/root/sdaccel.ini", 0xfffff6bfc328, 0) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/dev/dri/by-path/", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = -1 ENOENT (No such file or directory)
+futex(0xffffabef90a4, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+write(2, "terminate called after throwing "..., 48terminate called after throwing an instance of ') = 48
+write(2, "boost::filesystem::filesystem_er"..., 35boost::filesystem::filesystem_error) = 35
+...
+
+Cerca comunque di aprire /dev/dpu, che è dove dovrebbe aver mappato la DPU, quindi immagino che non stia effettivamente simulando il task ma sta cercando di allocarlo sulla DPU. Se creo manualmente la directory, va in segmentation fault. Analizziamo questo segmentation fault con strace:
+# strace ./benchmark /dev/shm/yolov3_voc/yolov3_voc.xmodel yolo_1.jpg
+...
+newfstatat(3, "", {st_mode=S_IFDIR|0755, st_size=40, ...}, AT_EMPTY_PATH) = 0
+getdents64(3, 0xaaaac9abe670 /* 2 entries */, 32768) = 48
+getdents64(3, 0xaaaac9abe670 /* 0 entries */, 32768) = 0
+close(3)                                = 0
+newfstatat(AT_FDCWD, "/dev/dri/renderD128", 0xfffffbfdec18, 0) = -1 ENOENT (No such file or directory)
+ioctl(-67244424, DRM_IOCTL_VERSION, 0xfffffbfded28) = -1 EBADF (Bad file descriptor)
+close(-67244424)                        = -1 EBADF (Bad file descriptor)
+brk(0xaaaac9af3000)                     = 0xaaaac9af3000
+openat(AT_FDCWD, "yolo_1.jpg", O_RDONLY) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=160514, ...}, AT_EMPTY_PATH) = 0
+read(3, "\377\330\377\333\0\204\0\3\2\2\3\2\2\3\3\3\3\4\3\3\4\5\10\5\5\4\4\5\n\7\7\6"..., 4096) = 4096
+close(3)                                = 0
+openat(AT_FDCWD, "yolo_1.jpg", O_RDONLY) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=160514, ...}, AT_EMPTY_PATH) = 0
+read(3, "\377\330\377\333\0\204\0\3\2\2\3\2\2\3\3\3\3\4\3\3\4\5\10\5\5\4\4\5\n\7\7\6"..., 4096) = 4096
+mmap(NULL, 1536000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffff7ca5a000
+openat(AT_FDCWD, "/proc/cpuinfo", O_RDONLY) = 4
+newfstatat(4, "", {st_mode=S_IFREG|0444, st_size=0, ...}, AT_EMPTY_PATH) = 0
+read(4, "processor\t: 0\nBogoMIPS\t: 130.00\n"..., 1024) = 720
+read(4, "", 1024)                       = 0
+close(4)                                = 0
+read(3, "\0ywWt\277\6|[*\263%\235\233c\256\353\325\25\f\237\7|V\215\265\255m?\336[\264"..., 4096) = 4096
+...
+read(3, "\375?\334(\334*\262\270~\2377\275?&\273lx\304\224\372\257\277\336\235\271\251X\t\251\224\332\223"..., 8191) = 8191
+close(3)                                = 0
+--- SIGSEGV {si_signo=SIGSEGV, si_code=SEGV_MAPERR, si_addr=0xaaaac9afd} ---
+...
+
+Tolgo la roba del graph_runner, anche perché trovo la definizione di create_runner_with_attrs, quello nativo, in:
+~/petalinux_sdk_2021.2/sysroots/cortexa72-cortexa53-xilinx-linux/usr/include/vart/runner.hpp
+
+In cui c'è scritto che effettivamente l'attr doveva essere mode, come avevo settato all'inizio.
+Facendo un po' di tracing del programma, vedo che il segmentation fault è su attrs->set_attr .
+Anche ritornando al mode originale dopo aver creato /dev/dri/by-path/, continuo ad avere segmentation fault e non lo riesco a risolvere, allora tolgo la parte di set_attr e vedo se la libreria riesce in automatico a fare il fallback sulla CPU non avendo la DPU.
+Ottengo questo errore:
+
+# ./benchmark /dev/shm/yolov3_voc/yolov3_voc.xmodel yolo_1.jpg 
+Image load ok
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+F0614 16:54:12.723528  1939 dpu_runner.cpp:266] [UNILOG][FATAL][VART_RUNNER_CONSTRUCTION_FAIL][Cannot create runner] cannot open library! lib=libvart-dpu-runner.so, error=ERROR CODE: libvart-dpu-runner.so: cannot open shared object file: No such file or directory
+*** Check failure stack trace: ***
+[21419.889065] audit: type=1701 audit(1655250852.778:31): auid=4294967295 uid=0 gid=0 ses=4294967295 pid=1939 comm="benchmark" exe="/home/root/benchmark" sig=6 res=1
+Aborted
+
+La libreria libvart-dpu-runner.so non la trovo da nessuna parte tra i file che ho installato.
+Provo allora ad eseguire un altro esempio, quello con resnet50, che usa direttamente API_0.
+
+Con resnet50 ho l'errore su libvart-sim-runner.so ; ed ho ancora quello su /dev/dri/by-path/ se la cartella non esiste.
+Quindi ci sono 3 librerie: libvart-dpu-runner, libvart-cpu-runner e libvart-sim-runner, bisogna trovarle.
+
+Mettiamo in pausa questa parte per fare Design of Experiment.
+I fattori che consideriamo sono: multithreading (1, 2 task in parallelo), utilizzo DSP (low, high), utilizzo Softmax (enabled, disabled).
+Facciamo quindi un design 2x2x2, con 3 ripetizioni, in totale 24 esperimenti.
+Per ogni esperimento mettiamo lo stesso set di immagini, tenendoci al di sotto del batch size, quindi metteremo circa una decina di immagini.
+
+
+Torniamo alle librerie. libvart-dpu-runner lo trovo nelle librerie del nuovo petalinux.
+
+$ tar -czvf ~/EmbeddedSystems/progetto/benchmark_code/vitis-ai-runtime.tar.gz libvitis_ai_library-xnnpp.so* libvitis_ai_library-model_config.so* libprotobuf.so* libvitis_ai_library-dpu_task.so* libopencv_core.so* libopencv_video.so* libopencv_videoio.so* libopencv_imgproc.so* libopencv_imgcodecs.so* libopencv_highgui.so* libxir.so* libvitis_ai_library-math.so* libvitis_ai_library-graph_runner.so* libvitis_ai_library-math.so* libvart-runner-assistant.so* libvart-runner.so* libvart-util.so* libtbb.so* libopencv_calib3d.so* libunilog.so* libvart-dpu-controller.so* libvitis_ai_library-runner_helper.so* libvart-buffer-object.so* libopencv_features2d.so* libopencv_flann.so* libboost_filesystem.so* libvart-trace.so* libvart-xrt-device-handle.so* libvart-xrt-device-handle.so* libvart-dpu-runner.so*
+
+Se non riusciamo a trovare la libreria per la simulazione, si può comunque riorganizzare il codice per fare un wrapping della parte di esecuzione, in modo tale da scrivere il codice per il DoE su uno stub che ritorna tempi casuali e cominciare quindi a prendere i tempi.
+Il codice lo organizzo in modo tale da prendere da linea di comando se usare uno o due thread, se simulare, se fare il post processing oppure no.
+
+Per cercare la librerie con cpu-runner e sim-runner, cerchiamo di mettere un po' a caso le versioni di Vitis-AI vedendo le release su github nell'endpoint per il download del vitis-ai-runtime, con l'idea che queste librerie dovrebbero essere vecchie quindi vicine alla 1. La 1.0.0 non c'è, ma dopo un po' di tentativi vediamo che c'è la 1.0.1, il cui url è:
+https://www.xilinx.com/bin/public/openDownload?filename=vitis-ai-runtime-1.0.1.tar.gz
+
+E restituisce un file molto più grande degli altri, ovvero 4.6 GB.
+Però nemmeno qui c'è. Cerchiamo anche in altre versioni.
+Nella 1.3.0 vediamo che è presente un "dummy-runner".
+Il dummy runner c'è poi fino alla 2.5.0, constatiamo dopo aver scaricato praticamente tutte le versioni. Quindi ci limitiamo a "simulare" con lo stub.
+
+Per quanto riguarda la costruzione del testset di immagini, un link utile è il seguente:
+https://storage.googleapis.com/openimages/web/index.html
+
+Vedere in particolare la sezione "download manually": si specificano manualmente gli id delle immagini (mediante magari un filtraggio), e si usa un downloader.
+Mi scarico questo CSV contenente id di immagini: https://storage.googleapis.com/openimages/v5/validation-annotations-human-imagelabels-boxable.csv e mi tengo solo le prime 10k immagini, poi uso il downloader: https://raw.githubusercontent.com/openimages/dataset/master/downloader.py
+
+$ python downloader.py validation-annotations-human-imagelabels-boxable.csv --download_folder=./images --num_processes=5
+
+Il downloader mi dà errore, perché quel CSV non è una lista di immagini, ma contiene dei labels.
+Mi faccio quindi un altro script per creare da quel CSV il file di testo ben formattato:
+$ python create_text_file.py
+
+Parecchie labels sono ripetute ed altre hanno nomi non validi, quindi alla fine mi restano 1654 immagini da scaricare.
+
+$ python downloader.py images_to_download.txt --download_folder=./images --num_processes=5
+
+Ne scarica 1653, una non la trova, comunque per il nostro esperimento va più che bene.
+
+Bisogna inoltre esplicitamente gestire la presenza del core softmax, infatti:
+"L'IP della DPU è solo un wrapper ma ogni core, softmax compreso, ha le sue interfacce di memoria separate. ll vart runner esegue un thread su un DPU core. Il core softmax è praticamente un acceleratore a parte, tra l'altro non programmabile perchè fa una sola cosa. Infatti in molti esempi troverete l'implementazione software della funzione softmax anche se è abilitato nella DPU. Vi suggerisco di dare un occhio a cosa serva esattamente la funzione softmax, senza scendere nel dettaglio ovviamente, perchè potrebbe influenzare la progettazione degli esperimenti.
+
+Per quanto riguarda l'utilizzo partite da questo post https://support.xilinx.com/s/question/0D52E00006sDl0dSAC/archjson-not-changing-when-including-softmax?language=en_US ma tenete conto che alcuni link potrebbero essere obsoleti."
+
+La funzione softmax in pratica trasforma il vettore di dati in input in una PDF esponenziale, volendo sintetizzare e usando un abuso di notazione nel parlare di "vettore".
+Misurare solo il tempo di esecuzione dei job sulla DPU (execute async, wait) sembra più pulito rispetto a portare nell'intervallo di misura anche il ciclo for con tutti i softmax, che potrebbe essere di un ordine di grandezza temporale diverso; tuttavia, su questo abbiamo libertà.
+
+Oltre al runner, esiste il softmax-runner e softmax-runner-cpu, come spiegato nel link.
+Un codice di esempio che si può guardare: https://github.com/Xilinx/Vitis-AI/blob/master/src/Vitis-AI-Runtime/VART/vart/softmax-runner/test/resnet_v1_50_softmax/resnet_v1_50_tf.cpp#L112-L119
+
+Scrivo quindi il codice per gestire la presenza hardware del softmax; in caso in cui non sia trovata, si fa il fallback su quella software.
+La parte di softmax è incluse nella misura del tempo se e solo se il post-processing è disabilitato, in questo modo si evita di fare determinate operazioni del post-processing più volte. Aggiungo inoltre l'opzione --hw-softmax.
+Inoltre, visto che ho incluso una nuova shared library, la devo mettere nel mio runtime (a cui ho aggiunto il prefisso "my-"):
+
+$ cd ~/petalinux_sdk_2021.2/sysroots/cortexa72-cortexa53-xilinx-linux/usr/lib/
+$ tar -czvf ~/EmbeddedSystems/progetto/benchmark_code/my-vitis-ai-runtime.tar.gz libvitis_ai_library-xnnpp.so* libvitis_ai_library-model_config.so* libprotobuf.so* libvitis_ai_library-dpu_task.so* libopencv_core.so* libopencv_video.so* libopencv_videoio.so* libopencv_imgproc.so* libopencv_imgcodecs.so* libopencv_highgui.so* libxir.so* libvitis_ai_library-math.so* libvitis_ai_library-graph_runner.so* libvitis_ai_library-math.so* libvart-runner-assistant.so* libvart-runner.so* libvart-util.so* libtbb.so* libopencv_calib3d.so* libunilog.so* libvart-dpu-controller.so* libvitis_ai_library-runner_helper.so* libvart-buffer-object.so* libopencv_features2d.so* libopencv_flann.so* libboost_filesystem.so* libvart-trace.so* libvart-xrt-device-handle.so* libvart-xrt-device-handle.so* libvart-dpu-runner.so* libvart-softmax-runner.so*
+
+In effetti ho errore se non aggiungo tale libreria.
+
+# ./resnet50 
+Usage: ./resnet50 [model_file] {--use-two-threads} {--sim} {--no-postprocess} {--base-image-path NEW_PATH} {--hw-softmax}
+
+Chiedere se per il multithreading è necessario creare un runner per ogni thread oppure se è sufficiente fare diverse execute_async. (Risposta: alla fine è necessario un runner diverso per ogni thread, verificato sperimentalmente analizzando il driver più in là).
+
+Il boot sulla ultrascale è andato.
+$ screen /dev/ttyUSB0 115200
+...
+[  OK  ] Started NFS status monitor for NFSv2[   12.113439] update-alternatives: Linking /usr/lib/libMali.so.9.0 to /usr/lib/x11/libMali.so.9.0
+/3 locking..
+[   12.151237] Warn: update-alternatives: libmali-xlnx has multiple providers with the same priority, please check /usr/lib/opkg/alternatives/libmali-xlnx for details
+[   12.183425] update-alternatives: Linking /usr/lib/libMali.so.9.0 to /usr/lib/x11/libMali.so.9.0
+[   12.604949] update-alternatives: Linking /usr/lib/libMali.so.9.0 to /usr/lib/x11/libMali.so.9.0
+[   12.630271] Unloading old XRT Linux kernel modules
+[   12.638886] Loading new XRT Linux kernel modules
+[  OK  ] Created slice Slice /system/systemd-fsck.
+[  OK  ] Found device /dev/mmcblk0p1.
+         Starting File System Check on /dev/mmcblk0p1...
+[  OK  ] Finished File System Check on /dev/mmcblk0p1.
+         Mounting /run/media/mmcblk0p1...
+[FAILED] Failed to mount /run/media/mmcblk0p1.
+See 'systemctl status run-media-mmcblk0p1.mount' for details.
+[FAILED] Failed to start Rebuild Dynamic Linker Cache.
+See 'systemctl status ldconfig.service' for details.
+         Starting Update is Completed...
+[  OK  ] Finished Update is Completed.
+[   14.624481] INFO: Creating ICD entry for Xilinx Platform
+[  OK  ] Finished Run pending postinsts.
+You are in emergency mode. After logging in, type "journalctl -xb" to view
+system logs, "systemctl reboot" to reboot, "systemctlGive root password for maintenance
+(or press Control-D to continue): [   16.985826] TI DP83867 ff0e0000.ethernet-ffffffff:0c: Downshift occurred from negotiated speed 1Gbps to actual speed 100Mbps, check cabling!
+[   16.999849] macb ff0e0000.ethernet eth0: Link is Up - 100Mbps/Full - flow control tx
+[   17.007617] IPv6: ADDRCONF(NETDEV_CHANGE): eth0: link becomes ready
+
+Login incorrect
+
+Give root password for maintenance
+(or press Control-D to continue): 
+sh-5.1# ls
+sh-5.1# whoami
+root
+sh-5.1# 
+
+Funziona però forse ci sono problemi di rete, quindi non riesco a connettermi ad ssh; l'alternativa potrebbe essere mettere i file che mi servono già nella cartella home nella scheda SD.
+Proviamo pure quella di Manuel (che è senza auto-login e fa fare login con petalinux).
+Anche quella di Manuel funziona, e tra l'altro non va in emergency mode prima di recuperare dal boot.
+Metto quindi i file nella cartella home. Ho questo errore:
+# ./resnet50 model/resnet50/resnet50.xmodel --base-image-path sanity_check/
+Base image path set to: sanity_check/ instead of cwd
+This will also be the path for classified images
+Number of threads: 1
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I0615 00:52:29.981320   749 resnet50.cpp:343] create running for subgraph: subgrap[  394.608771] audit: type=1701 audit(1655279549.983:6): auid=4294967295 uid=0 gid=0 ses=4294967295 pid=749 comm="resnet50" exe="/home/root/resnet50" sig=6 res=1
+h_conv1
+Creating runner...
+F0615 00:52:29.990001   749 dpu_controller.cpp:44] Check failed: !the_factory_methods.empty() 
+*** Check failure stack trace: ***
+Aborted
+
+Proviamo con la scheda di Manuel (su cui tra l'altro ho modificato manualmente /etc/shadow per mettere "petalinux" come password di root).
+Sulla scheda di Manuel inizialmente manca libjson, quindi la metto e poi riproviamo.
+Dà anche a lui lo stesso errore:
+
+# ./resnet50 my_model --base-image-path sanity_check/
+Base image path set to: sanity_check/ instead of cwd
+This will also be the path for classified images
+Number of threads: 1
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I0615 08:18:59.680950   784 resnet50.cpp:343] create running for subgraph: subgraph_conv1
+Creating runner...
+F0615 08:18:59.706292   784 dpu_controller.cpp:44] Check failed: !the_factory_methods.empty() 
+*** Check failure stack trace: ***
+Aborted
+
+Bisognava caricare prima l'FPGA:
+# fpgautil -o /lib/firmware/xilinx/base/base.dtbo -b /lib/firmware/xilinx/base/top_wrapper.bit.bin 
+[  678.424210] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /fpga-full/firmware-name
+[  678.434322] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /fpga-full/resets
+[  678.444015] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/overlay0
+[  678.453856] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/overlay1
+[  678.463691] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/afi0
+[  678.473184] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/clocking0
+[  678.483114] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/clocking1
+[  678.493039] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/overlay2
+[  678.502879] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/hier_dpu_DPUCZDX8G
+[  678.513587] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/misc_clk_0
+[  678.523595] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/misc_clk_1
+Time taken to load BIN is 290.000000 Milli Seconds
+BIN FILE loaded through FPGA manager successfully
+
+In questo caso si è accesso il led verde dell'FPGA.
+Dà ancora errore, però forse il bitstream base non era quello giusto.
+Proviamo con un bitstream fornito dalla DPU.
+Il comando:
+# fpgautil -o /lib/firmware/xilinx/DPUcores_2_impl_1_01/DPUcores_2_impl_1_01.dtbo -b /lib/firmware/xilinx/DPUcores_2_impl_1_01/top_wrapper.bit.bin 
+
+Sulla mia scheda SD dà problemi, proviamo su quella di Manuel dopo aver ricopiato in /lib/firmware.
+Anche dopo aver caricato il bitstream contenente la DPU, l'eseguibile dà comunque errore.
+Proviamo a fare un strace per vedere cosa non va.
+
+# strace -e trace=file ./resnet50 my_model --base-image-path sanity_check/
+..
+Ci manca il device /dev/dpu.
+
+Per quanto riguarda la configurazione dell'interfaccia di rete, sulla scheda:
+# ifconfig eth0 192.168.1.1
+
+Sull'host (nel mio caso):
+$ ifconfig enp2s0 192.168.1.2
+
+Ora il ping va in entrambi i versi, e funziona anche il login con SSH.
+Modifico il programma per il benchmark in modo tale da gestire più ripetizioni.
+
+Proviamo quindi a fare gli esperimenti sulla scheda SD fornita da Vincenzo, visto che la nostra non trova il device DPU.
+Adesso funziona.
+
+C'è un problema con il parallelismo: il batchSize risulta uguale ad 1; inoltre, per usare più core veramente in parallelo, bisogna usare due runner diversi via software.
+
+# ./resnet50 my_model --no-postprocess --base-image-path sanity_check/ --num-repetitions 30 > thread_dpu_high_1.txt & ./resnet50 my_model --no-postprocess --base-image-path sanity_check/ --num-repetitions 30 > thread_dpu_high_2.txt
+
+Questo con 2 thread "veri".
+Per fare un confronto equo con il caso di un thread, mando due job con un solo runner:
+
+# ./resnet50 my_model --no-postprocess --base-image-path sanity_check/ --num-repetitions 30 --use-two-threads > emulate_two_threads_dpu_high.txt
+
+Il softmax core non viene trovato, usando API standard ed esempi:
+
+# ./resnet50 my_model --hw-softmax --base-image-path sanity_check/ --no-postprocess
+Base image path set to: sanity_check/ instead of cwd
+Number of threads: 1
+Hardware softmax core not found in subgraph, falling back to software softmax
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I0615 12:21:17.705696  1703 resnet50.cpp:376] create running for subgraph: subgraph_conv1
+Creating runner...
+Create runner ok
+Batch max size: 1
+Tensors allocation okay
+Run size: 1
+Image read and resize okay
+Tensors refactoring okay
+Starting repetition number 0
+Intermediate elapsed time (before softmax): 0.0104129
+Total elapsed time: 0.0104817
+
+Notare: "Hardware softmax core not found in subgraph, falling back to software softmax"
+Il problema potrebbe essere il modello deserializzato di rete neurale, che non contempla l'uso di un softmax core, e quindi il core pur essendo presente nella DPU, risulta non presente nel subgraph; bisogna verificarlo con un altro modello che contempla l'uso di un softmax core, come quello relativo al codice di esempio dell'uso dell'hardware softmax.
+
+Ora dobbiamo fare i test con DSP low:
+# cd /lib/firmware/xilinx/DSP_USAGE_low
+# fpgautil -R
+# fpgautil -b DSP_USAGE_low.bit.bin -o DSP_USAGE_low.dtbo
+
+Abbiamo quindi preso le misure.
+Dobbiamo però risolvere il problema di far spawnare /dev/dpu su una nostra build.
+Per differenza rispetto alla configurazione funzionante, vediamo che facendo "lsmod" su quel sistema, c'è un modulo chiamato "dpu", ed infatti funziona "modprobe dpu", mentre sulla nostra build "modprobe dpu" non trova niente all'interno di /lib/modules/5.15.19-xilinx-v2022.1 (dopo aver rifatto la build includendo i nuovi xsa, la mia scheda sd permette di fare fpgautil).
+
+Quindi proviamo ad operare sulla config del kernel.
+Bisogna abilitare:
+Device drivers -> Misc devices -> Xilinx Deep learning Processing Unit (DPU) Driver
+
+E poi bisogna rifare la build.
+Anche in questo caso, per qualche motivo il modulo dpu.ko non è presente.
+Per quanto riguarda l'emergency mode, il problema è della corruzione della memoria della scheda SD: bisogna aspettare che l'eject sia completo.
+
+Dobbiamo inoltre ri-progettare la misura dei tempi, in modo da avere tempi più grandi del linux scheduler time slice.
+In pratica bisogna fare prima un ciclo for in cui si fa il pre-processing di tutte le immagini (senza fare ottimizzazioni "in-place") e poi un altro ciclo for in cui fare le run, nonostante il fatto che la batchSize sia 1. Inoltre bisogna gestire il caso di 2 thread proprio con 2 thread separati, che magari hanno una struttura condivisa in cui scrivere i risultati, ed il main thread dopo aver fatto la join sui 2 thread stampa i tempi. Splittiamo a metà il carico sui due thread. A tal punto si potrebbe anche prendere un solo tempo, dopo la join sui thread, anche se questo è a grana grossa perché includerebbe anche la parte di pre-processing.
+Prendere spunto da: https://github.com/Xilinx/Vitis-AI/blob/master/examples/DPUCADF8H/tf_resnet50_multi_thread/src/test_classify_multi_thread.cpp
+
+Trovo un articolo interessante per quanto riguarda l'aggiunta di dpu.ko:
+https://github.com/UviDTE-FPSoC/Zynq7000-dnn-inference/wiki/Petalinux-project-configuration-to-run-Deep-Neural-Networks
+
+Modifico il file <petalinux_proj_directory>/project-spec/meta-user/conf/user-rootfsconfig , nel mio caso <petalinux_proj_directory> è /home/marcofelix98/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1 , ed al file aggiungo CONFIG_dpu .
+A tal punto:
+$ petalinux-config -c rootfs
+
+Seleziono user packages -> dpu.
+
+Per testare questa build senza buildare di nuovo tutto, posso fare:
+$ petalinux-build -c kernel
+$ petalinux-build -c dpu
+
+La guida poi spiega step successivi per fare le cose in modo più pulito, aggiungendo anche altri driver, l'autoload del modulo nella configurazione del kernel e così via, fino ad esportare il progetto creato in un nuovo BSP (diversi step sono obsoleti nel nostro caso perché non viene usata Vitis-AI ma DNNDK).
+La build del kernel va tranquillamente, invece per quanto riguarda la dpu ho l'errore "Nothing PROVIDES 'dpu' ".
+Faccio allora una build completa, per vedere se il modulo dpu esce nel rootfs.
+Tuttavia, avendo aggiunto quel modulo dpu, anche la build completa va in errore.
+Allora tolgo quella linea CONFIG_dpu.
+Non trovo nient'altro, devo solo rifare la build ancora una volta e sperare che il file esca.
+Se non esce, come tentativo posso prendere il file dpu.ko ottenuto per la versione "vecchia" (ovvero dalla scheda SD di Vincenzo), e cambiarne il magic number per far matchare la mia versione. In effetti è comunque un eseguibile per la stessa scheda, ed il kernel di Linux tutto sommato non sarà così diverso.
+La modifica del vermagic ha il problema che quello target ha un carattere in più, quindi poi il formato risulta non valido ("too large section header").
+Si può in realtà forzare l'insmod, facendo insmod --force o modprobe --force, per dirgli di ignorare la vermagic.
+Però risolvo il problema in modo più facile, ovvero per aggiungere quel byte in più sacrifico il byte nullo finale nella speranza che ci sia un byte nullo anche dopo, e scopro che questo approccio funziona.
+
+$ ./modify_magic.sh 
+Original modinfo
+...
+vermagic:       5.10.0-xilinx-v2021.2 SMP mod_unload aarch64
+...
+Modified modinfo
+filename:       /home/marcofelix98/EmbeddedSystems/progetto/benchmark_code/kernel_modules/dpu.ko
+alias:          platform:xlnx-dpu
+license:        GPL v2
+author:         Ye Yang <yey@xilinx.com>
+description:    Xilinx Deep Learning Processing Unit driver
+alias:          of:N*T*Cxlnx,dpuczdx8g-3.4C*
+alias:          of:N*T*Cxlnx,dpuczdx8g-3.4
+depends:        
+name:           dpu
+vermagic:       5.15.19-xilinx-v2022.1 SMP mod_unload aarch64
+parm:           timeout:Set DPU timeout val in secs (default 5s) (int)
+parm:           force_poll:polling or interrupt mode (default interrupt) (bool)
+
+Però poi andando a vedere "strace modprobe dpu", e andando a guardare cosa c'è nei file che modprobe va ad interrogare, scopro che in realtà il driver per la dpu c'è, solo che si chiama in un altro modo e questo ha rotto la dipendenza: si trova in /lib/modules/kernel/drivers/misc/xlnx_dpu.ko, almeno secondo il file modules.builtin; dunque, se ci fosse davvero, basterebbe creare un alias. Il problema è che in realtà non c'è nemmeno lì.
+Quindi bisogna aggiungere quello creato all'extra e poi modificare modules.dep e modules.dep.bin; ciò non si fa manualmente, ma usando depmod.
+
+A tal punto si ricopia dpu.ko in /lib/modules/5.15.19-xilinx-v2022.1/extra/ .
+Tuttavia, in questo modo si hanno errori del tipo:
+[ 1184.188994] dpu: Unknown symbol printk (err -2)
+[ 1184.189413] dpu: Unknown symbol dev_printk (err -2)
+[ 1333.880728] dpu: Unknown symbol kmem_cache_alloc_trace (err -2)
+[ 1333.881300] dpu: Unknown symbol printk (err -2)
+[ 1333.881626] dpu: Unknown symbol dev_printk (err -2)
+
+Quindi la strada di modificare la vermagic non funziona.
+Qui: https://support.xilinx.com/s/question/0D52E00007BtrimSAB/ive-been-looking-into-dpu-module-codedpuc-from-vitis-ai-and-i-couldnt-find-the-info-on-all-the-registers-mentioned-in-that-code-in-the-dpu-product-guide-where-can-i-find-info-on-all-registers-in-the-dpu-module-code?language=en_US
+Trovo il codice sorgente del driver: dpu.c e dpu.h; per fare la cross-compilation di moduli del kernel, seguo quanto spiegato qui:
+https://support.xilinx.com/s/question/0D52E00006iHkd5SAC/how-do-i-build-a-kernel-module-seperately?language=en_US
+Nella risposta di gogo:
+
+Inorder to setup the cross-compilation of kernel modules, follow the below steps.
+1. Build and install petalinux SDK [ Refer, PetaLinux Tools Documentation Reference Guide ]
+2. Source cross-compilation environment.
+    source <sdk-installation-path>/environment-setup-aarch64-xilinx-linux
+3. Go to kernel source folder in petalinux build folder
+    cd <petalinux-project-folder>/build/tmp/work-shared/plnx-zynqmp/kernel-source
+4. Generate .config file for kernel and prepare modules
+    make ARCH=arm64 xilinx_zynqmp_defconfig
+    make ARCH=arm64 modules_prepare
+5. Export the kernel source path variable
+   export KERNEL_src=<petalinux-project-folder>/build/tmp/work-shared/plnx-zynqmp/kernel-source
+6. Goto the kernel module folder (which you want to cross compile) and edit the Makefile as follow.
+    obj-m := custom_module.o
+    SRC := $(shell pwd)
+    all:
+             $(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules
+7. Build the kernel module ( make sure sdk environment is set )
+    make
+
+Nel mio caso, l'environment è ~/petalinux_sdk_2021.2/environment-setup-cortexa72-cortexa53-xilinx-linux e la scheda è zcu102, quindi:
+$ source ~/petalinux_sdk_2021.2/environment-setup-cortexa72-cortexa53-xilinx-linux
+$ cd ~/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/build/tmp/work-shared/xilinx-zcu102/kernel-source/
+$ make ARCH=arm64 xilinx_zynqmp_defconfig
+$ make ARCH=arm64 modules_prepare
+$ export KERNEL_SRC=~/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/build/tmp/work-shared/xilinx-zcu102/kernel-source
+$ cd /home/marcofelix98/EmbeddedSystems/progetto/benchmark_code/kernel_modules/compile_dpu_mod
+$ make
+
+Ho un po' di warning di undefined symbols perché in kernel-source manca il file Module.symvers, però il kernel module builda.
+A questo punto lo devo provare in qemu.
+$ scp -P1114 dpu.ko root@127.0.0.1:/home/root
+In qemu:
+# cp dpu.ko /lib/modules/5.15.19-xilinx-v2022.1/extra/
+# depmod --quick
+# modprobe dpu
+[ 4322.514411] dpu: version magic '5.15.19 SMP mod_unload aarch64' should be '5.15.19-xilinx-v2022.1 SMP mod_unload aarch64'
+modprobe: ERROR: could not insert 'dpu': Exec format error
+
+Okay, ci siamo quasi, devo risolvere quest'ultimo problema, dopodiché dovrebbe andare.
+In kernel-source/include/generated modifico utsrelease.h mettendo 5.15.19-xilinx-v2022.1 al posto di 5.15.19:
+$ sed 's/5.15.19/5.15.19-xilinx-v2022.1/g' -i ~/EmbeddedSystems/progetto/ultrascale_project/xilinx-zcu102-2022.1/build/tmp/work-shared/xilinx-zcu102/kernel-source/include/generated/utsrelease.h
+
+A tal punto lo sposto in qemu e ripeto i passi precedenti.
+Ora mi dà errore dicendo che il driver xlnx-dpu è già registrato, quindi riavvio qemu.
+Questo non risolve il problema: il problema è che xlnx-dpu è presente tra i moduli built-in, ovvero a causa del file modules.builtin viene cercato in /lib/modules/kernel/drivers/misc/xlnx_dpu.ko ; anche se non lo trova, non me ne fa inserire un altro.
+Allora, visto che ho trovato il modo di buildarlo io, rifaccio la configurazione di petalinux, togliendo il device che avevo abilitato:
+Device drivers -> Misc devices -> Xilinx Deep learning Processing Unit (DPU) Driver
+
+Dopo aver rifatto la build, vedo che effettivamente non c'è più quel modulo in modules.builtin, quindi riprovo ad inserirlo.
+Il modulo dpu viene aggiunto correttamente; ovviamente /dev/dpu non mi compare, questo è dovuto al fatto che sono in qemu e che fpgautil fallisce perché non trova l'fpga. So che viene aggiunto correttamente in base all'output di dmesg:
+[  324.090325] xlnx-dpu: Xilinx Deep Learning Processing Unit driver
+
+Comunque, dal codice sorgente del driver, vedo che xlnx_dpu_run è protetta con un mutex, quindi un solo processo alla volta può fare la run (oppure un solo runner per processo, qualcosa del genere).
+Inoltre, se si aggiunge al codice la definizione di DEBUG, allora vengono stampati su dmesg i tempi delle run sia della dpu sia della softmax hardware misurati dal kernel.
+
+Per quanto riguarda il batchSize, è interessante leggere la seguente issue: https://github.com/Xilinx/Vitis-AI/issues/762
+Ovvero il batchSize dev'essere 1 per quantizzare il modello, poi si può configurare più alto in accordo con i limiti hardware della DPU, ma tipicamente non è maggiore di 8; quindi lasciamolo 1, senza configurarlo, ed usiamo quel ciclo for.
+
+Dal punto di vista del codice dell'esperimento, faccio un po' di refactoring, ovvero faccio in modo da passare per riferimento il grafo alla funzione runResnet50 (cosa che poi ho cambiato: passo il filename da cui leggere il grafo), nella quale quindi si istanziano il vart runner ed il softmax runner (con fallback su CPU se non è disponibile il softmax core). La funzione non prende più in input il numero di thread, quindi gestisce il caso di un solo thread, e non calcola più il tempo della softmax, ma solo quello dell'esecuzione del batch di immagini (ho strutturato il codice in modo tale che può ancora supportare batchSize > 1). Ho inoltre aggiunto un parametro relativo alla verbosity: di default è false e non stampa niente. Il vettore elapsed_times non viene più ritornato, ma viene usato all'interno della funzione per salvare il tempo di ogni batch (quindi senza leggere le immagini tutte insieme, per motivi di ottimizzazione della memoria), e poi alla fine della funzione vengono sommati tutti i tempi. La funzione prende inoltre un thread ID ed un vettore di double chiamato exec_times: ciascun thread scrive alla posizione relativa al proprio ID il risultato della somma dei tempi. Il main, che istanza i thread, fa join dei vari thread e poi stampa gli exec times.
+
+Nello scrivere il codice dei thread, ho problemi ad includere l'header dei thread, allora cambio il compilerPath in c_cpp_properties.json, da:
+"compilerPath": "/usr/lib64/ccache/arm-none-eabi-gcc"
+a:
+"compilerPath": "/home/marcofelix98/petalinux_sdk_2021.2/sysroots/x86_64-petalinux-linux/usr/bin/aarch64-xilinx-linux/aarch64-xilinx-linux-gcc"
+
+Il vettore di double l'ho dovuto passare proprio come vector, non come puntatore ad array di double, altrimenti dava errore il template.
+Non ho implementato la parte di split del carico via software: per semplicità, la implemento creando una cartella con la metà delle immagini, e quindi passando quella come --base-image-path.
+Il confronto quindi lo si fa con il max tra i vari execution times dei singoli thread.
+
+Il context switch ci mette approssimativamente 0.1 ms, quindi l'errore è su 2 cifre dopo rispetto all'ordine di grandezza dell'elaborazione di un'immagine sulla DPU (questo lo vedo dai first_results presi).
+Quindi togliamo softmax come fattore, e facciamo 50 ripetizioni per esperimento.
+
+Abbiamo dovuto modificare il codice del driver, modificando le funzioni copy_to_user, copy_from_user, get_user e put_user con memcpy e semplici assegnazioni, perché in qualche modo il controllo sull'address range sulla ultrascale viene fatto in modo sbagliato (oppure il codice viene compilato in modo tale da non passare gli indirizzi user alle funzioni copy_to_user ecc, ma passare gli indirizzi all'interno dello stack del driver; vedere il codice e ragionare sulla priorità relativa degli operatori '&' e '->').
+A tal punto ha funzionato.
+
+Per quanto riguarda la softmax, usare quell'altro modello in cui teoricamente ci sarebbe dovuto essere il softmax core nel subgraph non ha funzionato, quindi effettivamente bisogna usare quell'altra parte di API (vedere chat su teams).
+Dunque alla fine per motivi di tempo confermiamo che abbiamo escluso l'utilizzo del softmax core come fattore (tra l'altro ci aspettavamo che sarebbe stato incorrelato).
+
+Alla fine inoltre abbiamo aggiunto il parametro --diff-path-for-thread per fornire path diversi a thread diversi, in modo tale da implementare il requisito di far elaborare 100 immagini diverse da 2 thread, 50 a testa (invece che lo stesso campione di 50 immagini).
+
+Ho un problema nella misurazione: misuro quanto tempo ciascun thread passa sulla DPU, ma non quanto tempo ci mettono complessivamente, ovvero non so se vanno effettivamente in parallelo.
+Allora aggiugno una misurazione del total experiment time, ovvero prima dell'istanziazione dei thread e dopo la join dei thread.
+
+root@xilinx-zcu102-20221:~# ./resnet50 my_model --base-image-path final_images/images_100/ --no-postprocess
+Total experiment time: 5.14898
+Thread 0 execution time: 1.02894 seconds
+root@xilinx-zcu102-20221:~# ./resnet50 my_model --no-postprocess --num-threads 2 --diff-path-for-thread
+Total experiment time: 3.13478
+Thread 0 execution time: 0.532307 seconds
+Thread 1 execution time: 0.528849 seconds
+
+I due thread non ci mettono di meno (solo) perché vanno in parallelo sulla DPU, ci mettono di meno (soprattutto) perché leggono le immagini in parallelo.
+Per risolvere il problema, faccio una compilazione in cui faccio solo pre-processing senza le execute sulla DPU (resnet50_no_exec) e una in cui faccio l'elaborazione completa, facendo la differenza; questo approccio non è andato bene nel caso di 2 thread, nel senso che la differenza puntuale soffre di overfitting, bisogna fare due diversi modelli (solo pre-processing, pre-processing ed elaborazione) e confrontarli in maniera statistica per stimare da essi i tempi di elaborazione complessivi.
+
+In realtà alla fine abbiamo deciso di fare comunque la differenza puntuale, scartando gli outliers (che sono, nel caso di 2 thread, le differenze in cui il tempo è minore di 0.5, dovuto ad I/O più veloce); in totale sono 8 outliers nel caso di DSP high, e 12 outliers nel caso di DSP low.
+In realtà sono outliers anche i punti in cui, nel caso di 2 thread, la differenza è maggiore di 0.6; però questi outliers decidiamo di tenerli.
+Quindi nel caso di DSP high e 2 thread, ci sono 42 ripetizioni invece di 50, mentre nel caso di DSP low e 2 thread, ci sono 38 ripetizioni invece di 50.
+
+Quindi valutiamo importanza e significatività dei fattori, e riportiamo degli istogrammi (vedere screenshots di importanza e significatività, ed immagine con istogrammi).
+Poi facciamo anche un t-test tra DSP low e DSP high, visto che hanno valori molto vicini, per vedere se sono uguali dal punto di vista statistico.
+
+Così facendo, con un thread risulta che tutte le 50 ripetizioni ci mettono più di un secondo, sia con DSP low sia con DSP high; con 2 thread invece sono tutti maggiori di 0.5, la maggior parte tra 0.5 e 0.55, alcuni tra 0.55 e 0.6, altri tra 0.65 e 0.7.
+Il numero di thread risulta importante e significativo, mentre l'utilizzo DSP non risulta né importante né significativo.
+
+Per quanto riguarda il confronto statistico tra DSP high e DSP low:
+- nel caso di 1 thread, le distribuzioni sono normali, e le varianze uguali, quindi li confrontiamo con ttest2 (two-sample t-test), ottenendo h=0 e p=0.2045: con un buon grado di confidenza possiamo dire che le medie sono uguali, dal punto di vista statistico;
+- nel caso di 2 thread, le distribuzioni NON sono normali, quindi li confrontiamo con il ranksum test (la cui ipotesi nulla è che le mediane siano uguali), ottenendo h=0 e p=0.2658: con un buon grado di confidenza possiamo dire che le mediane sono uguali, dal punto di vista statistico.
+
+Dunque affermiamo con ancora maggiore evidenza che l'utilizzo dei DSP non incide sui tempi.
+
+Dal punto di vista della misura dei tempi, si poteva migliorare la granularità con cui i tempi sono stati presi: ovvero caricare precedentemente le immagini in memoria e poi passarle ai rispettivi thread, in modo tale da misurare solo i tempi delle execute_async-wait; non è stato fatto per motivi di tempo (ci sarebbe voluto un altro giorno in laboratorio). E' per questo quindi che nel caso di 2 thread le misure risultano non normali.
+
